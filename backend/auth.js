@@ -3,7 +3,13 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
-// Fungsi untuk menghasilkan token
+/**
+ * Generates a JWT token for a user.
+ *
+ * @param {string} userId - The ID of the user.
+ * @returns {string} The generated JWT token.
+ * @throws {Error} If the userId is not provided.
+ */
 const generateToken = (userId) => {
   if (!userId) {
     throw new Error("User ID is required to generate a token");
@@ -14,7 +20,13 @@ const generateToken = (userId) => {
   });
 };
 
-// Fungsi untuk memverifikasi token
+/**
+ * Verifies a JWT token.
+ *
+ * @param {string} token - The JWT token to verify.
+ * @returns {object} The decoded token payload if verification is successful.
+ * @throws {Error} If the token is not provided or is invalid.
+ */
 const verifyToken = (token) => {
   if (!token) {
     throw new Error("Token is required to verify");
@@ -28,3 +40,4 @@ const verifyToken = (token) => {
 };
 
 module.exports = { generateToken, verifyToken };
+

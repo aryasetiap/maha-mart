@@ -1,3 +1,9 @@
+/**
+ * This file contains the API endpoints for authentication.
+ *
+ * @module auth
+ */
+
 const express = require("express");
 const router = express.Router();
 const { pool, hashPassword, comparePassword } = require("../db/postgres");
@@ -6,6 +12,9 @@ const { OAuth2Client } = require("google-auth-library");
 const nodemailer = require("nodemailer");
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+/**
+ * Creates a nodemailer transporter for sending emails.
+ */
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -14,7 +23,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Register
+/**
+ * Registers a new user.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
@@ -45,7 +59,12 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Login
+/**
+ * Logs in a user.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -86,7 +105,12 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Google OAuth Login
+/**
+ * Handles Google OAuth login.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 router.post("/google-login", async (req, res) => {
   const { tokenId } = req.body;
 
@@ -135,7 +159,12 @@ router.post("/google-login", async (req, res) => {
   }
 });
 
-// Forgot Password
+/**
+ * Handles forgot password.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
 
@@ -176,7 +205,12 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-// Reset Password
+/**
+ * Handles reset password.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 router.post("/reset-password", async (req, res) => {
   const { token, newPassword } = req.body;
 
