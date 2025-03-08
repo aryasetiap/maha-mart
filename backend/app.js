@@ -10,7 +10,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("./db/mongo");
 const { pool } = require("./db/postgres");
-const authRoutes = require("./routes/auth");
+const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const path = require("path");
 
@@ -96,4 +96,3 @@ mongoose.connection
   .on("error", (err) => {
     console.error("Error connecting to MongoDB:", err);
   });
-
