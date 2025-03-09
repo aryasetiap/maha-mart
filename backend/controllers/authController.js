@@ -1,21 +1,36 @@
 // authController.js
+/**
+ * Controller for authentication-related operations.
+ * Handles user registration, login, Google login, and password reset.
+ */
+
 const { pool, hashPassword, comparePassword } = require("../db/postgres");
 const { generateToken, verifyToken } = require("../utils/auth");
 const { OAuth2Client } = require("google-auth-library");
 const nodemailer = require("nodemailer");
+
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Configure the email transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
 });
 
+/**
+ * Registers a new user.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 exports.register = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: "Email and password are required" });
 
   try {
+    if (!process.env.GOOGLE_CLIENT_ID)
+      return res.status(500).json({ error: "Google Client ID is not set" });
+
     const hashedPassword = await hashPassword(password);
     const result = await pool.query(
       "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *",
@@ -33,6 +48,11 @@ exports.register = async (req, res) => {
   }
 };
 
+/**
+ * Logs in an existing user.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 exports.login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
@@ -46,6 +66,8 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: "User not found" });
 
     const user = result.rows[0];
+    if (!user) return res.status(401).json({ error: "User not found" });
+
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
@@ -58,11 +80,19 @@ exports.login = async (req, res) => {
   }
 };
 
+/**
+ * Logs in a user with Google OAuth.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 exports.googleLogin = async (req, res) => {
   const { tokenId } = req.body;
   if (!tokenId) return res.status(400).json({ error: "Token ID is required" });
 
   try {
+    if (!process.env.GOOGLE_CLIENT_ID)
+      return res.status(500).json({ error: "Google Client ID is not set" });
+
     const ticket = await googleClient.verifyIdToken({
       idToken: tokenId,
       audience: process.env.GOOGLE_CLIENT_ID,
@@ -70,18 +100,21 @@ exports.googleLogin = async (req, res) => {
     const email = ticket.getPayload()?.email;
     if (!email) return res.status(400).json({ error: "Email is required" });
 
-    let user = await pool.query("SELECT * FROM users WHERE email = $1", [
+    let userResult = await pool.query("SELECT * FROM users WHERE email = $1", [
       email,
     ]);
-    if (user.rows.length === 0)
-      user = await pool.query(
+    if (userResult.rows.length === 0) {
+      userResult = await pool.query(
         "INSERT INTO users (email) VALUES ($1) RETURNING *",
         [email]
       );
+      if (!userResult.rows[0]?.id)
+        return res.status(500).json({ error: "User creation failed" });
+    }
 
     res.status(200).json({
       message: "Google login successful",
-      token: generateToken(user.rows[0]?.id),
+      token: generateToken(userResult.rows[0]?.id),
     });
   } catch (error) {
     console.error("Google login error:", error);
@@ -89,11 +122,19 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
+/**
+ * Sends a password reset email to the user.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email is required" });
 
   try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)
+      return res.status(500).json({ error: "Email credentials are not set" });
+
     const userResult = await pool.query(
       "SELECT * FROM users WHERE email = $1",
       [email]
@@ -118,6 +159,11 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+/**
+ * Resets the user's password.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ */
 exports.resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword)
@@ -127,6 +173,8 @@ exports.resetPassword = async (req, res) => {
 
   try {
     const decoded = verifyToken(token);
+    if (!decoded?.id) return res.status(401).json({ error: "Invalid token" });
+
     const hashedPassword = await hashPassword(newPassword);
     const result = await pool.query(
       "UPDATE users SET password = $1 WHERE id = $2",
