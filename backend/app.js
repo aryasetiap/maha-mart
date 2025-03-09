@@ -10,8 +10,9 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("./db/mongo");
 const { pool } = require("./db/postgres");
-const authRoutes = require("./routes/authRoutes");
-const productRoutes = require("./routes/productRoutes");
+const authRoutes = require("./routes/authRouter");
+const productRoutes = require("./routes/productRouter");
+const orderRoutes = require("./routes/orderRouter");
 const path = require("path");
 
 /**
@@ -56,6 +57,9 @@ app.use("/api/auth", authRoutes);
 
 // Product routes
 app.use("/api/products", productRoutes);
+
+// Order routes
+app.use("/api/orders", orderRoutes);
 
 /**
  * Error handling
